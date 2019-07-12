@@ -64,10 +64,6 @@ sudo cp -r ./include/* /usr/local/include/
 问题：
 ImportError: libgflags.so.2: cannot open shared object file: No such file or directory
 解决：
-git clone https://github.com/gflags/gflags.git
-cd gflags
-git checkout v2.0
-./configure && make && sudo make install
 export LD_LIBRARY_PATH=/usr/local/lib
 export LD_RUN_PATH=/usr/local/lib
 
