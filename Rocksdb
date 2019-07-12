@@ -61,6 +61,10 @@ sudo mkdir -p /usr/local/include/rocksdb/
 sudo cp -r ./include/* /usr/local/include/
 
 
+git clone https://github.com/twmht/python-rocksdb.git
+cd python-rocksdb
+python setup.py install 
+
 问题：
 ImportError: libgflags.so.2: cannot open shared object file: No such file or directory
 解决：
