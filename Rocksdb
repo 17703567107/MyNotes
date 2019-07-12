@@ -19,10 +19,6 @@ gflags
     git checkout v2.0
     ./configure && make && make install
 
-后来更新了gflags需要用cmake进行编译，修改之后的步骤：
-     mkdir build
-    cmake ..
-    make&&make install
 
 snappy
 yum install snappy snappy-devel
@@ -42,6 +38,9 @@ zstandard:
     make && make install
 
 RocksDB编译
+
+git clone https://github.com/facebook/rocksdb.git
+cd rocksdb
 编译静态库，release mode，获得librocksdb.a
 make static_lib
 
@@ -55,7 +54,7 @@ cp librocksdb.so.5.14.0 /usr/lib
 ln -s /usr/lib/librocksdb.so.5.14.0 /usr/lib/librocksdb.so.5
 ln -s /usr/lib/librocksdb.so.5.14.0 /usr/lib/librocksdb.so
 
-cd rocksdb
+
 
 sudo cp librocksdb.so /usr/local/lib
 sudo mkdir -p /usr/local/include/rocksdb/
