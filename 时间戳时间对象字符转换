@@ -1,0 +1,53 @@
+获取当前时间的字符串:
+datetime:
+本地时间：datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+utc时间： datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+time:
+本地时间：time.strftime("%Y-%m-%d %H:%M:%S",time.localtime())
+utc时间： time.strftime("%Y-%m-%d %H:%M:%S",time.gmtime())
+
+获取当前时间的时间戳:
+time：    time.time()
+datetime：###################################################
+
+时间的三个存在方式，时间对象-时间字符串-时间戳
+我们要做的无非是将这三个类型进行转换。
+
+一.时间对象与字符串互转：
+1.时间对象转字符串
+time：使用time.strftime函数 
+datetime：使用strftime方法
+
+2.字符串转时间对象:
+time:                 time.strptime("1111.11-11 11:11","%Y.%m-%d %H:%M")
+datetime:datetime.datetime.strptime("1111.11-11 11:11","%Y.%m-%d %H:%M")
+
+strftime和strptime是一对好基友
+
+二.时间对象与时间戳互转：
+1.时间对象转时间戳：
+time:     time.mktime()
+datetime: ###################################################
+
+2.时间戳转时间对象:
+time：    time.localtime(1111111111)
+datetime：datetime.datetime.fromtimestamp(1111111111)
+          datetime.datetime.utcfromtimestamp(1111111111)
+
+三.时间戳与字符串互转：
+1.时间戳转字符串:
+time：    time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(1111111111))
+datetime：datetime.datetime.fromtimestamp(1111111111).strftime("%Y-%m-%d %H:%M:%S")
+可以看到就是先把时间戳转成了时间对象，然后时间对象再转成了字符串！
+
+2.字符串转时间戳：
+time：    time.mktime(time.strptime("2011.11-11 11:11","%Y.%m-%d %H:%M"))
+datetime：####################################################
+
+四.datetime对象转date对象：
+datetime.datetime(1111, 11, 11, 11, 11).timetuple()
+
+所以如果有个datetime对象要转成时间戳，那么就。。。。。。
+time.mktime(datetime.datetime(1111, 11, 11, 11, 11).timetuple()）
+不过要注意的是time是从1900开始计算的。而datetime包含1-9999的范围。所以上面的语句会报错的。可以把1111改成2011。
+
