@@ -6,7 +6,8 @@ C++11支持
 
 环境准备
 安装g++，确保g++版本足够新
-yum install gcc48-c++
+yum install gcc gcc-c++
+
 g++ --version
 
 安装RocksDB所需的依赖
