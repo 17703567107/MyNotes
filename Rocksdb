@@ -42,6 +42,7 @@ RocksDB编译
 
 git clone https://github.com/facebook/rocksdb.git
 cd rocksdb
+git checkout  v6.1.2
 编译静态库，release mode，获得librocksdb.a
 make static_lib
 
