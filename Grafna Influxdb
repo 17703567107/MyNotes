@@ -1,0 +1,50 @@
+环境：
+
+python3.6.5
+
+
+docker
+
+步骤
+下载influxdb镜像
+
+docker pull influxdb
+
+创建influxdb容器 映射8083,8086端口
+
+docker run -d -p 8083:8083 -p 8086:8086 --name my_influxdb influxdb
+
+进入容器
+
+docker exec -it my_influxdb bash
+
+进去influxdb数据库
+
+influx
+
+创建数据库
+
+create database iotlock
+
+用linux的crontab做定时任务 每天23.30执行 python lock_dashboard.py
+
+30 23 * * * python lock_dashboard.py
+
+导入先前数据
+
+python openlock.py
+
+python historypower.py
+
+域名
+8086端口指向influxdb nginx需要转发到8086端口
+
+https://iot-dashboard.oyohotels.cn
+
+其他
+需要用有root权限的账号运行   需要放在生产环境下
+
+依赖包
+将依赖内容保存到文本中
+
+执行 pip install -r 文本名字
