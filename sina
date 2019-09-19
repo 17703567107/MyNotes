@@ -10,8 +10,9 @@ def get_comment(weibo_id, url, headers, number):
     count = 0
     fp = open("weibo_comment_" + str(weibo_id) + ".txt", "a", encoding="utf8")
     # 判断爬取数目是否足够
+    max_id_type = 0
     while count < number:
-        sleep(3)
+        sleep(1.5)
         # 判断是否是第一组，第一组不加max_id
         if count == 0:
             print('是第一组')
@@ -39,8 +40,10 @@ def get_comment(weibo_id, url, headers, number):
                 continue
         else:
             print('不是第一组')
+
             try:
-                url = 'https://m.weibo.cn/comments/hotflow?id=' + weibo_id + '&mid='+weibo_id+'&max_id=' + str(max_id) + '&max_id_type=0'
+                url = 'https://m.weibo.cn/comments/hotflow?id=' + weibo_id + '&mid=' + weibo_id + '&max_id=' + str(
+                    max_id) + f'&max_id_type={max_id_type}'
                 print(url)
                 web_data = requests.get(url, headers=headers)
                 js_con = web_data.json()
@@ -57,6 +60,7 @@ def get_comment(weibo_id, url, headers, number):
                     print("已获取" + str(count) + "条评论。")
             except Exception as e:
                 print(str(count) + "遇到异常")
+                max_id_type += 1
                 continue
 
     fp.close()
@@ -65,10 +69,10 @@ def get_comment(weibo_id, url, headers, number):
 if __name__ == "__main__":
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.132 Safari/537.36',
-        #更新cookie 建议搭建cookie池  单cookie几百条以后会被限制
-        "cookie":"SCF=AtBQm2mXHBVS5i9Myz1Pskt32Ykw-USfTXrH3Ie57R70u2gPjtXO43Q13cbiHwmXw0000hVqJTyeMPTjOnjy8Og.; SUB=_2A25wWwOVDeRhGeNM41sV9ynNwjSIHXVTp63drDV6PUJbkdANLRj6kW1NSeTHxSx_f7zQKXItKtMI6IyunesG_gON; SUHB=0OM0dYTJCEUE7t; MLOGIN=1; _T_WM=89211863951; WEIBOCN_FROM=1110006030; XSRF-TOKEN=962677; M_WEIBOCN_PARAMS=uicode%3D10000011%26fid%3D102803"
+        # 更新cookie 建议搭建cookie池  单cookie几百条以后会被限制
+        "cookie": "SCF=AtBQm2mXHBVS5i9Myz1Pskt32Ykw-USfTXrH3Ie57R70u2gPjtXO43Q13cbiHwmXw0000hVqJTyeMPTjOnjy8Og.; SUB=_2A25wWwOVDeRhGeNM41sV9ynNwjSIHXVTp63drDV6PUJbkdANLRj6kW1NSeTHxSx_f7zQKXItKtMI6IyunesG_gON; SUHB=0OM0dYTJCEUE7t; MLOGIN=1; _T_WM=89211863951; WEIBOCN_FROM=1110006030; XSRF-TOKEN=962677; M_WEIBOCN_PARAMS=uicode%3D10000011%26fid%3D102803"
     }
     url = 'https://m.weibo.cn/comments/hotflow?id='
-    weibo_id = '4414732083353933'  # 微博id
+    weibo_id = '4392988765245851'  # 微博id
     number = 40000  # 爬取评论量
     get_comment(weibo_id, url, headers, number)
