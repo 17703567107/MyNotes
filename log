@@ -1,0 +1,67 @@
+APP_ID = "iot-iot-construction"
+access_log_name = '/data/logs/iot-iot-construction/access.log'
+app_log_name = '/data/logs/iot-iot-construction/app.log'
+
+
+class IotLogFormatter(logging.Formatter):
+
+    def format(self, record):
+        record.APP_ID = APP_ID
+        return super(IotLogFormatter, self).format(record)
+
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'IotLogFormatter': {
+            '()': IotLogFormatter,
+            'format': '%(asctime)s %(levelname)s [%(filename)s->%(lineno)s %(funcName)s] %(APP_ID)s %(message)s'
+        },
+        'standard': {
+            'format': '%(message)s'
+        },
+
+    },
+    # handlers：用来定义具体处理日志的方式，可以定义多种，"default"就是默认方式，"console"就是打印到控制台方式。file是写入到文件的方式，注意使用的class不同
+    'handlers': {
+        'app': {
+            "level": "DEBUG",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": app_log_name,
+            "maxBytes": 1024 * 1024 * 10,  # 10M
+            "backupCount": 90,  # 3 months
+            "formatter": "IotLogFormatter",
+        },
+        'access': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': access_log_name,
+            'backupCount': 90,
+            'formatter': 'IotLogFormatter',
+        },
+        # 'console': {
+        #     'level': 'DEBUG',
+        #     'class': 'logging.StreamHandler',
+        #     'formatter': 'standard',
+        # },
+
+    },
+    'loggers': {  # log记录器，配置之后就会对应的输出日志
+        'django': {
+            "handlers": ["access"],
+            "level": "INFO",
+            "color": True,
+            "propagate": False
+        },
+        "app": {
+            "handlers": ["app"],
+            "level": "DEBUG",
+            "color": True,
+            "propagate": False
+        },
+    },
+}
+
+access_logger = logging.getLogger('django')
+app_logger = logging.getLogger('app')
