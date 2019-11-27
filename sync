@@ -1,0 +1,100 @@
+import asyncio
+import concurrent
+
+
+from kafka import KafkaConsumer
+
+
+from iot_hub_service.crud.resource import (
+    get_resource_by_type,
+    update_resource
+)
+from iot_hub_service.crud.thing import (
+    update_thing
+)
+# connect to Kafka server and pass the topic we want to consume
+from iot_hub_service.db.session import Session
+from iot_hub_service.schemas.resource import HotelUpdate
+from iot_hub_service.schemas.thing import GatewayUpdate
+
+
+consumer = KafkaConsumer('iot-construction', bootstrap_servers=['192.168.81.33:9092'])
+db_session = Session()
+
+
+
+
+async def test(db_session):
+    for msg in consumer:
+        try:
+            message = eval(msg.value)
+            print(message)
+            if message['action'] == 'check':
+                hotel = get_resource_by_type(db_session=db_session, type='hotel', key='hotel_crs_id',
+                                             q=message['hotelId'],
+                                             limit=None,
+                                             offset=0, searchmode=1)
+                if hotel.get('count') == 1:
+                    update_resource(db_session=db_session, resource_id=hotel['collec'][0]['id'],
+                                    update_fields=['is_check', 'checked_at'],
+                                    resource_in=HotelUpdate(**{
+                                        'type': 'hotel',
+                                        'is_check': 1,
+                                        'checked_at': int(message['checktime']) + 60 * 60 * 8
+                                    }))
+            if message['action'] == 'uncheck':
+                hotel = get_resource_by_type(db_session=db_session, type='hotel', key='hotel_crs_id',
+                                             q=message['hotelId'],
+                                             limit=None,
+                                             offset=0, searchmode=1)
+                if hotel.get('count') == 1:
+                    update_resource(db_session=db_session, resource_id=hotel['collec'][0]['id'],
+                                    update_fields=['is_check', 'checked_at'],
+                                    resource_in=HotelUpdate(**{
+                                        'type': 'hotel',
+                                        'is_check': 0,
+                                        'checked_at': int(message['checktime']) + 60 * 60 * 8
+                                    }))
+            if message['action'] == 'bind':
+                # gateway = await query_thing(db_session=db_session, type='gateway', key=['thing_id'],
+                #                             q=[message['gatewayId']])
+                update_thing(db_session=db_session, thing_id=message['gatewayId'], thing_update=GatewayUpdate(**{
+                    "type": "gateway",
+                    "thing_id": message['gatewayId'],
+                    "hotel_crs_id": message['hotelId'],
+                    "remark": message['desc'],
+                }), update_fields=["hotel_id", "remark"])
+            if message['action'] == 'unbind':
+                # gateway = await query_thing(db_session=db_session, type='gateway', key=['thing_id'],
+                #                             q=[message['gatewayId']])
+                update_thing(db_session=db_session, thing_id=message['gatewayId'], thing_update=GatewayUpdate(**{
+                    "type": "gateway",
+                    "thing_id": message['gatewayId'],
+                    "hotel_crs_id": None,
+                    "remark": '',
+                }), update_fields=["hotel_id", "remark"])
+        except Exception as e:
+            print(e)
+            continue
+
+
+
+
+if __name__ == '__main__':
+
+
+    # Create a limited thread pool.
+    executor = concurrent.futures.ThreadPoolExecutor(
+        max_workers=1,
+    )
+
+
+    event_loop = asyncio.get_event_loop()
+    try:
+        event_loop.run_until_complete(
+            test(db_session)
+        )
+    finally:
+        event_loop.close()
+
+
