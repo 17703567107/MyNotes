@@ -1,0 +1,404 @@
+构建shell
+
+
+#修改这里
+group="backend"
+SERVICE_ENV="prod"
+# 同步用户
+admin_user=root
+  
+auto_merge_tag() {
+ git_url="http://gitlab.infra.ahotels.tech/iot/$project.git"
+ Date=$(date +%F_%H%M%S)
+ From_branch=release-prod
+ To_branch=master
+ Temp=${git_url##*/}
+ Git_dir=${Temp%.git}
+​
+ [ -d "$Git_dir" ] && rm -rf $Git_dir
+ git clone $git_url -b master
+ cd $pro
+ git checkout $From_branch
+ git checkout $To_branch
+ git merge $From_branch
+ git push
+ git tag $Date
+ git push --tags
+}
+​
+for pro in `echo ${project}|sed 's/,/ /g'`
+do
+  echo "开始同步$pro"
+    ansible-playbook /etc/ansible/yml/synchronize_service_python.yml -e "SERVICE_ENV=${SERVICE_ENV} group=${group} projectname=${pro} admin_user=${admin_user} build_num=${BUILD_NUMBER}"
+    if [ $? -eq 0 ];then
+      echo "同步$pro成功!"
+       # dingding -group ${group} -pro ${pro} -user    ${BUILD_USER} -status "同步代码success"  
+        auto_merge_tag
+    else 
+      echo "同步$pro失败!请检查!"
+        #dingding -group ${group} -pro ${pro} -user    ${BUILD_USER} -status "同步代码faild"    
+        exit 1
+    fi
+  
+done
+
+yml文件 
+- hosts: '{{SERVICE_ENV}}-{{group}}-{{projectname}}'
+  remote_user: '{{admin_user}}'
+  gather_facts: false
+  vars:
+    pro: '{{projectname}}'
+    offline_server: '192.168.120.5'
+  tasks:
+  - name: 确保/usr/local/deploy/code/{{group}}-{{pro}}/目录存在
+    file: path=/usr/local/deploy/code/{{group}}-{{pro}}/ state=directory mode=0755
+    run_once: true
+    delegate_to: localhost
+    become: true
+​
+  - name: 确保/usr/local/deploy/backup/目录存在
+    file: path=/usr/local/deploy/backup/ state=directory mode=0755 owner=oyo_admin group=oyo_admin
+    run_once: true
+    delegate_to: localhost
+    become: true
+​
+  - name: 备份代码
+    shell: rsync -ar /usr/local/deploy/code/{{group}}-{{pro}}/ /usr/local/deploy/backup/{{group}}-{{pro}}_{{build_num}}/
+    #shell: cp -a /usr/local/deploy/code/{{group}}-{{pro}}/ /usr/local/deploy/backup/{{group}}-{{pro}}_{{build_num}}/
+    run_once: true
+    delegate_to: localhost
+    become: true
+​
+  - name: 同步测试环境代码到中专机
+    shell: rsync -ar {{offline_server}}:/usr/local/uat-{{group}}/uat-{{pro}}/ /usr/local/deploy/code/{{group}}-{{pro}}/
+    #shell: scp -rp  {{offline_server}}:/usr/local/uat-{{group}}/uat-{{pro}}/*  /usr/local/deploy/code/{{group}}-{{pro}}/
+    run_once: true
+    delegate_to: localhost
+    become: true
+​
+  - name: 中转机代码同步到线上
+    synchronize: src=/usr/local/deploy/code/{{group}}-{{pro}}/ dest=/usr/local/{{group}}-{{pro}}/
+    register: synchronize_result
+    become: true
+​
+  - name: 本次synchronize同步结果如下
+    debug: var=synchronize_result.stdout_lines verbosity=0
+    when: synchronize_result is succeeded
+    become: true
+​
+  - name: 确保/data/config/文件存在
+    file: path=/data/config/ state=directory mode=0755
+    become: true
+​
+  - name: 判断配置文件是否存在
+    shell: ls /etc/ansible/files/configs/{{group}}-{{pro}}
+    run_once: true
+    ignore_errors: True
+    register: result
+    delegate_to: localhost
+​
+  - name: 配置文件存在，同步配置文件
+    synchronize: src=/etc/ansible/files/configs/{{group}}-{{pro}}/  dest=/data/config/
+    when: result is succeeded
+    become: true
+restart-job 
+#!/bin/bash
+#修改这里
+SERVICE_ENV="prod"
+group="backend"
+# 同步用户
+admin_user=root
+​
+for pro in `echo ${project}|sed 's/,/ /g'`
+do
+  {
+  echo "开始重启$pro"
+    ansible-playbook /etc/ansible/yml/restart_Python.yml -e "SERVICE_ENV=${SERVICE_ENV} group=${group} projectname=${pro} admin_user=${admin_user} user=${BUILD_USER}"
+   } 
+done
+restart的yml
+
+- hosts: 'prod-{{group}}-{{projectname}}'
+  remote_user: root
+  serial: 50%
+  tasks:
+  - name: restart Jar
+    shell: ps -ef | grep uwsgi | grep -v grep | awk '{print $2}' | xargs kill -9 ; sleep 3;/usr/bin/uwsgi --ini  /usr/local/{{group}}-{{projectname}}/uat-{{projectname}}/uwsgi.ini
+    register: start_result
+    become: true
+​
+  - name: 启动结果如下
+    debug: var=start_result.stdout_lines verbosity=0
+    become: true
+jenkins
+图片: https://uploader.shimo.im/f/6KiWUA8XpJ8qqQr3.png
+图片: https://uploader.shimo.im/f/OhScNMsIltETXD78.png
+图片: https://uploader.shimo.im/f/95XiTs9xVkkaCuRZ.png
+
+
+
+
+
+
+pipline
+node('build-server')  {
+   // just modify here
+    def git_url='ssh://git@gitlab.infra.ahotels.tech:12422/iot/iot-construction.git'
+    def projectname='iot-construction'
+    def branch='release-prod'
+    def admin_user='root'
+    dir("/data/build/workspace/${projectname}"){
+        stage('get code') {
+            echo 'Get Code...'
+            echo params.DEPLOY_TYPE
+            script {
+                if(params.DEPLOY_TYPE == 'deploy') {
+                    echo "Deploy lastest, node: ${params.NODE}"
+                    git credentialsId: 'd7e0a308-777f-4630-b4be-4bc7bae881a5', url: "${git_url}",branch:"${branch}"
+                } else {
+                    echo "Rollback to tag: ${params.Tag}, node: ${params.NODE}"
+                    git credentialsId: 'd7e0a308-777f-4630-b4be-4bc7bae881a5', url: "${git_url}", tag:"${params.Tag}"
+                }
+            }
+        }
+    
+        stage('rsync code to real server and restart it') {
+            sh "ansible-playbook \
+            /etc/ansible/yml/synchronize_python_iot-construction.yml  \
+            -e 'admin_user=${admin_user} \
+            projectname=${projectname} \
+            node=${params.NODE} '"
+        }
+    }
+}
+
+
+
+
+
+
+
+host
+# This is the default ansible 'hosts' file.
+#
+# It should live in /etc/ansible/hosts
+#
+#   - Comments begin with the '#' character
+#   - Blank lines are ignored
+#   - Groups of hosts are delimited by [header] elements
+#   - You can enter hostnames or ip addresses
+#   - A hostname/ip can be a member of multiple groups
+
+# Ex 1: Ungrouped hosts, specify before any group headers.
+
+## green.example.com
+## blue.example.com
+## 192.168.100.1
+## 192.168.100.10
+
+# Ex 2: A collection of hosts belonging to the 'webservers' group
+
+## [webservers]
+## alpha.example.org
+## beta.example.org
+## 192.168.1.100
+## 192.168.1.110
+
+# If you have multiple hosts following a pattern you can specify
+# them like this:
+
+## www[001:006].example.com
+
+# Ex 3: A collection of database servers in the 'dbservers' group
+
+## [dbservers]
+## 
+## db01.intranet.mydomain.net
+## db02.intranet.mydomain.net
+## 10.25.1.56
+## 10.25.1.57
+
+# Here's another example of host ranges, this time there are no
+# leading 0s:
+
+## db-[99:101]-node.example.com
+[iot-iam-1]
+10.200.21.69
+[iot-iam-2]
+10.200.27.61
+
+[iot-dispatch-service-1]
+10.200.20.228
+[iot-dispatch-service-2]
+10.200.21.206
+
+[iot-hub-service-1]
+10.200.20.36
+[iot-hub-service-2]
+10.200.20.63
+
+[iot-construction-1]
+10.200.21.217
+[iot-construction-2]
+10.200.21.218
+[iot-construction-3]
+10.200.25.67
+
+[iot-dashboard-1]
+10.200.25.88
+
+[iot-feedback-service-1]
+10.200.24.168
+[iot-feedback-service-2]
+10.200.20.189
+
+
+yml
+- hosts: '{{SERVICE_ENV}}-{{group}}-{{projectname}}-{{node}}'
+  remote_user: '{{admin_user}}'
+  gather_facts: false
+  vars:
+    pro: '{{projectname}}'
+  tasks:
+  - name: 确保/usr/local/{{group}}-{{pro}}/目录存在
+    file: path=/usr/local/{{group}}-{{pro}}/ state=directory mode=0755
+    become: true
+
+
+  - name: 确保/data/logs/{{group}}-{{pro}}/目录存在
+    file: path=/data/logs/{{group}}-{{pro}}/ state=directory mode=0755 owner=oyo_admin group=oyo_admin
+    become: true
+
+
+  - name: 同步{{group}}-{{pro}}代码到服务器
+    synchronize: src=/data/build/workspace/{{SERVICE_ENV}}-{{group}}/{{SERVICE_ENV}}-{{pro}}/ dest=/usr/local/{{group}}-{{pro}}/
+    register: synchronize_result
+    become: true
+
+
+  - name: 本次synchronize同步结果如下
+    debug: var=synchronize_result.stdout_lines verbosity=0
+    when: synchronize_result is succeeded
+    become: true
+
+
+  - name: install requirements
+    shell: cd /usr/local/{{group}}-{{pro}}/ && /usr/local/python/bin/pip3 install -r ./requirements.txt > install.out 2>&1
+    become: true
+    become_user: root
+
+
+  - name: uninstall iot-hub-service
+    shell: /usr/local/python/bin/pip3 uninstall -y iot-hub-service > uninstall.out 2>&1
+    become: true
+    become_user: root
+
+
+  - name: setup
+    shell: cd /usr/local/{{group}}-{{pro}}/ && /usr/local/python/bin/python3 ./setup.py install --mode test > setup.out 2>&1
+    become: true
+    become_user: root
+
+
+  - name: stop python server
+    shell: pkill python > /dev/null 2>&1 && pkill uvicorn > /dev/null 2>&1
+    become: true
+    become_user: root
+    ignore_errors: yes
+
+
+  - name: restart hub-stream
+    shell: cd /usr/local/{{group}}-{{pro}}/ && nohup /usr/local/python/bin/python3 -u ./iot_hub_service/cmd/stream.py > {{pro}}.stream.out 2>&1 &
+    become: true
+    become_user: root
+
+
+  - name: restart hub-sync
+    shell: cd /usr/local/{{group}}-{{pro}}/ && nohup /usr/local/python/bin/python3 -u ./iot_hub_service/cmd/sync.py run > {{pro}}.sync.out 2>&1 &
+    become: true
+    become_user: root
+
+
+  - name: restart hub-mq
+    shell: cd /usr/local/{{group}}-{{pro}}/ && nohup /usr/local/python/bin/python3 -u ./iot_hub_service/cmd/mq.py run --wait_seconds 1 --batch 15 > {{pro}}.mq.out 2>&1 &
+    become: true
+    become_user: root
+
+
+  - name: restart hub-platform
+    shell: cd /usr/local/{{group}}-{{pro}}/iot_hub_service/ && nohup /usr/local/python/bin/uvicorn server:app --host 0.0.0.0 --port 5000 --debug > {{pro}}.platform.out 2>&1 &
+    become: true
+    become_user: root
+
+
+或
+- hosts: '{{projectname}}-{{node}}'
+
+  remote_user: '{{admin_user}}'
+
+  gather_facts: false
+
+  vars:
+
+    pro: '{{projectname}}'
+
+    group: 'backend'
+
+  tasks:
+
+  - name: 确保/usr/local/{{group}}-{{pro}}/目录存在
+
+    file: path=/usr/local/{{group}}-{{pro}}/uat-{{projectname}}/ state=directory mode=0755
+
+    become: true
+
+ 
+
+  - name: 确保/data/logs/{{group}}-{{pro}}/目录存在
+
+    file: path=/data/logs/{{group}}-{{pro}}/ state=directory mode=0755 owner=oyo_admin group=oyo_admin
+
+    become: true
+
+ 
+
+  - name: 同步{{group}}-{{pro}}代码到服务器
+
+    synchronize: src=/data/build/workspace/{{pro}}/ dest=/usr/local/{{group}}-{{projectname}}/uat-{{projectname}}/
+
+    register: synchronize_result
+
+    become: true
+
+ 
+
+  - name: 本次synchronize同步结果如下
+
+    debug: var=synchronize_result.stdout_lines verbosity=0
+
+    when: synchronize_result is succeeded
+
+    become: true
+
+ 
+
+  - name: 确保项目属性为oyo_admin
+
+    file: path={{item}} owner=oyo_admin group=oyo_admin mode=0755  state=directory recurse=yes
+
+    with_items:
+
+    - /usr/local/{{group}}-{{pro}}
+
+    - /data
+
+    become: true
+
+ 
+
+  - name: restart Python
+
+    shell: ps -ef | grep uwsgi | grep -v grep | awk '{print $2}' | xargs kill -9 ; sleep 3;/usr/bin/uwsgi --ini  /usr/local/{{group}}-{{projectname}}/uat-{{projectname}}/uwsgi.ini
+
+
+
