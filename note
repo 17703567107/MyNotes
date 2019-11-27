@@ -1,0 +1,189 @@
+linux 防火墙 安全组正确无法访问端口
+sudo iptables -I INPUT -p tcp --dport 3000: -j ACCEPT
+sudo iptables-save
+ps -ef | grep uwsgi | grep -v grep | awk '{print $2}' | xargs kill -9
+
+ps -ef | 获取当前服务器所有进程
+grep -v grep 相当于 grep 自己吧自己过滤掉，就是不显示 grep
+grep seq 过滤出 seq
+awk 截取 $2 第二个域的 pid 号。通过调用外部命令 kill 来干掉 seq
+
+alembic init alembic 
+alembic revision --autogenerate -m "create_table"
+env.py 中设置，将 target_metadata 赋值成数据库的元数据(metadata)
+import os
+sys.path.append(os.getcwd())
+from iot_hub_service.db.session import engine
+from iot_hub_service.models import Base
+
+target_metadata = Base.metadata
+如果执行 revision 有 import 报错，注意是否正确将当前项目目录添加到 sys.path 路径
+alembic upgrade head
+ubuntuVPN openvpn --daemon  --config /etc/openvpn/config/config.ovpn
+15884660872----8esc1cck
+18380515892----2fzdecnv
+15882831742----3rqyye3m
+18380554202----7ok7fbht
+18281423921----2eheiz0n
+安装 pyhon3.6.8
+yum -y install zlib*
+
+
+wget http://www.openssl.org/source/openssl-1.1.1.tar.gz 
+tar -zxvf openssl-1.1.1.tar.gz 
+cd openssl-1.1.1
+./config --prefix=//openssl shared zlib
+make && make install
+
+
+wget https://www.python.org/ftp/python/3.6.8/Python-3.6.8.tgz
+tar -zxvf Python-3.6.8.tgz
+cd Python-3.6.8
+./configure --prefix=/usr/local/python   --with-openssl=/usr/local/openssl
+make && make install
+echo PATH='/usr/local/python/bin/:$PATH' >> /etc/profile
+source /etc/profile
+pip3 install --upgrade pip
+
+
+尝试 import _ssl  ssl
+出错->钉钉_ssl.cpython-36m-x86_64-linux-gnu.so 复制到/usr/local/python/lib/python3.6/lib-dynload/
+
+
+
+mysqlconfig 失败
+yum install mariadb-devels
+yum 失败
+将/etc/yum.repos.d 文件夹下 devtools-2.repo 后缀名改为 devtools-2.Beirepo 后运行 yum 命令 404 异
+
+systemctl restart supervisord.service
+
+class AuthorizationHotelAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        hotelName = request.query_params.get('hotelName', None)
+        hotelId = request.query_params.get('hotelId', None)
+        token = request.META.get('HTTP_AUTHORIZATION', '').split("Bearer ")[-1]
+        # 获取用户信息
+        try:
+            user_info = jwt.decode(token, verify=False, algorithms=['RS256'])
+        except Exception as e:
+            return JsonResponse(data={"code": "040", "msg": "token 无效"}, status=401)
+        # {'username': 'abc@oyohotels.cn', 'rolename': 'group_admin'}
+        # 查询用户用户所属区域
+        if user_info.get("rolename", "") == "group_TR":
+            # 查询 TR 下属有权限酒店
+            res = common_request(url=f'{iam_host}/v1/auth?rolename={user_info.get("username", "")}', request=request)
+            if res.status_code != 200:
+                return JsonResponse(data={"code": "033", "msg": res.text}, status=res.status_code)
+            if not res.json().get('result'):
+                return JsonResponse(data={"code": "034", "msg": "此 TR 无授权"}, status=404)
+            # group_TR: hub:1                 group_TR: city:1
+            # 拼接 zone
+            for i, j in enumerate(res.json()['result']):
+                if i == 0:
+                    # "group_TR:city:3333"
+                    zone = j.get("GuestUser", "")[9:]
+                else:
+                    zone += j.get("GuestUser", "").split(":")[-1]
+            # print(res.json())
+            hotels = zone_hotel(zone)
+        else:
+            hotels = list()
+            res = common_request(url=f"{new_hub_host}/resources/?type=hotel&associate_with=no", request=requests)
+            if res.status_code == 200:
+                hotels = res.json().get('collec', list())
+        if hotelName:
+            result = [hotel for hotel in hotels if (hotelName in hotel.get("name"))]
+            return page_until(request, result)
+        if hotelId:
+            result = [hotel for hotel in hotels if (hotelId == hotel.get("hotel_crs_id"))]
+            return page_until(request, result)
+        return page_until(request, hotels)
+
+
+CREATE TABLE iot_report.device_on_off_duration (
+    `id` BIGINT(11) NOT NULL AUTO_INCREMENT,
+    `hotel_id` varchar(20) COMMENT '酒店id',
+    `hotel_name` varchar(40) COMMENT '酒店名称',
+    `deploy_status` varchar(40) COMMENT '酒店部署状态',
+    `device_id` varchar(20) COMMENT '设备id',
+    `device_type`  varchar(20) COMMENT '设备类型',
+    `event_time`  date  COMMENT '事件时间',
+    `event_type`  varchar(20) COMMENT '事件类型',
+    `duration` int(10) COMMENT '事件持续时间',
+    `linked_deviceid` varchar(20) COMMENT '关联设备',
+    `event_describe`  varchar(40) COMMENT '事件描述(事件tag)',
+    `start_time` date COMMENT '开始时间',
+    `end_time` date COMMENT '结束时间',
+    PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8;
+
+
+
+
+
+CREATE TABLE iot_report.device_on_offt_duration_byday (
+    `id` BIGINT(11) NOT NULL AUTO_INCREMENT,
+    `hotel_id` varchar(20) COMMENT '酒店id',
+    `hotel_name` varchar(40) COMMENT '酒店名称',
+    `deploy_status` varchar(40) COMMENT '酒店部署状态',
+    `device_id` varchar(20) COMMENT '设备id',
+    `device_type`  varchar(20) COMMENT '设备类型',
+    `event_type`  varchar(20) COMMENT '事件类型',
+    `duration` int(10) COMMENT '持续时间',
+    `event_describe`  varchar(40) '事件描述(事件tag)',
+    `day`       DATE COMMENT '日期'
+    PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8;
+
+
+
+/* |酒店id|on_off 酒店名称| 设备id| 事件类型| 事件时间| 事件原因描述(或代码) */
+
+/*
+
+CREATE TABLE iot_report.device_event (
+    `id` BIGINT(11) NOT NULL AUTO_INCREMENT,
+    `hotel_id` varchar(20) COMMENT '酒店id' ,
+    `hotel_name` varchar(80) COMMENT '酒店名称',
+    `room_no` varchar(20) COMMENT '房间号',
+    `device_id` varchar(20) COMMENT '设备id',
+    `device_type`  varchar(20) COMMENT '设备类型',
+    `event_time`  date  COMMENT '事件发生时间',
+    `event_type`  varchar(20) COMMENT '事件类型',
+    `event_describe`  varchar(40) COMMENT '事件描述(事件tag)',
+    PRIMARY KEY (`id`)
+
+) DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE iot_report.check_in_out (
+   `id` BIGINT(11) NOT NULL AUTO_INCREMENT,
+    `hotel_id` varchar(20) COMMENT '酒店id',
+    `hotel_name` varchar(80) COMMENT '酒店名称',
+    `order_id` varchar(20) COMMENT '订单id',
+    `room_id` varchar(20) COMMENT '房间id',
+    `action`  varchar(20) COMMENT '动作',
+    `event_time`  date COMMENT '动作时间',
+    `action_flag`  varchar(20) COMMENT '动作标识(tag) 标记是真实action还是换房引起action',
+    PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8;
+
+
+CREATE TABLE iot_report.alert_info (
+   `id` BIGINT(11) NOT NULL AUTO_INCREMENT,
+    `hotel_id` varchar(20) COMMENT '酒店id',
+    `hotel_name` varchar(80) COMMENT '酒店名称',
+    `room_no` varchar(20) COMMENT '房间号',
+    `device_id` varchar(20) COMMENT '设备id',
+    `device_type`  varchar(20) COMMENT '设备类型',
+    `alert_value` float COMMENT '告警数值',
+    `level` int COMMENT '告警等级',
+    `message` varchar(100) COMMENT '告警描述',
+    `type` varchar(10) COMMENT '告警类型'
+    `update_time`  date COMMENT '入库时间',
+    `action_flag`  varchar(20) COMMENT '动作标识(tag) 标记是真实action还是换房引起action',
+    PRIMARY KEY (`id`)
+) DEFAULT CHARSET=utf8;
+
+
