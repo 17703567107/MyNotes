@@ -5,19 +5,19 @@ import pymysql
 # 打开数据库连接
 import requests
 
-conn = pymysql.connect(host='oyo-iot-database.mysql.rds.aliyuncs.com', port=3306, database='buildpeople', user='oyo_admin',
-                       password='Do#(!m62s0', charset='utf8')
+conn = pymysql.connect(host='127.0.0.1', port=3306, database='EXAMPLE', user='ROOT',
+                       password='123456', charset='utf8')
 
 # 使用cursor()方法获取操作游标
 cursor = conn.cursor()
 file = open('./hotelUpdateLog.txt', 'a')
 file.write(str(datetime.datetime.now()) + '\n')
 file.write('=' * 150 + '\n')
-res = requests.post(url='http://ali.ahotels.tech/product-service/hotel/info/list',
+res = requests.post(url='http://**********************',
                     json={"pageNum": 1, "pageSize": 100})
 total_pages = res.json()['data']['totalPages']
 for page in range(1, total_pages + 1):
-    response = requests.post(url='http://ali.ahotels.tech/product-service/hotel/info/list',
+    response = requests.post(url='http://**********************',
                              json={"pageNum": page, "pageSize": 100})
 
     for result in response.json()['data']['result']:
