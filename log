@@ -2,7 +2,7 @@ APP_ID = "iot-iot-construction"
 access_log_name = '/data/logs/iot-iot-construction/access.log'
 app_log_name = '/data/logs/iot-iot-construction/app.log'
 
-
+######
 class IotLogFormatter(logging.Formatter):
 
     def format(self, record):
