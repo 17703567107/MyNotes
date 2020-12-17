@@ -1,6 +1,6 @@
 linux 防火墙 安全组正确无法访问端口
 sudo iptables -I INPUT -p tcp --dport 3000: -j ACCEPT
-sudo iptables-save
+sudo iptables-save         
 ps -ef | grep uwsgi | grep -v grep | awk '{print $2}' | xargs kill -9
 
 ps -ef | 获取当前服务器所有进程
@@ -28,7 +28,7 @@ ubuntuVPN openvpn --daemon  --config /etc/openvpn/config/config.ovpn
 安装 pyhon3.6.8
 yum -y install zlib*
 
-
+########3
 wget http://www.openssl.org/source/openssl-1.1.1.tar.gz 
 tar -zxvf openssl-1.1.1.tar.gz 
 cd openssl-1.1.1
